@@ -1,0 +1,30 @@
+<nav class="navbar navbar-expand-md navbar-dark bg-primary mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="/">EventEase</a>
+        <button class="navbar-toggler" type="button" @onclick="ToggleNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="@NavClass">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">Events</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/register">Register</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/attendance">Attendance</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/session">My session</NavLink>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+@code {
+    private bool _collapsed = true;
+    private string NavClass => _collapsed ? "collapse navbar-collapse" : "navbar-collapse";
+    private void ToggleNav() => _collapsed = !_collapsed;
+}

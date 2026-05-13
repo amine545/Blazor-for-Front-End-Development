@@ -1,0 +1,70 @@
+@page "/session"
+@inject UserSessionService Session
+@inject EventService EventService
+@implements IDisposable
+
+<PageTitle>Session - EventEase</PageTitle>
+
+<h1>User Session</h1>
+
+@if (!Session.IsAuthenticated)
+{
+    <div class="alert alert-info">
+        You are not signed in.
+        <a class="btn btn-primary btn-sm ms-2" href="/signin">Sign in</a>
+    </div>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h4 class="card-title">@Session.UserName</h4>
+            <p class="card-text text-muted">@Session.Email</p>
+            <ul class="list-unstyled mb-0">
+                <li><strong>Signed in:</strong> @Session.LoginTime.ToString("g")</li>
+                <li><strong>Last activity:</strong> @Session.LastActivity.ToString("g")</li>
+                <li><strong>Session duration:</strong> @FormatDuration(Session.SessionDuration)</li>
+                <li><strong>Page views:</strong> @Session.PageViews</li>
+                <li><strong>Events registered:</strong> @Session.RegisteredEventIds.Count</li>
+            </ul>
+        </div>
+    </div>
+
+    @if (Session.RegisteredEventIds.Count > 0)
+    {
+        <h4>My registrations</h4>
+        <ul class="list-group">
+            @foreach (var id in Session.RegisteredEventIds)
+            {
+                var evt = EventService.GetById(id);
+                if (evt is not null)
+                {
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>@evt.Name <small class="text-muted">- @evt.Date.ToShortDateString()</small></span>
+                        <a class="btn btn-sm btn-outline-primary" href="@($"/events/{evt.Id}")">View</a>
+                    </li>
+                }
+            }
+        </ul>
+    }
+}
+
+@code {
+    private System.Threading.Timer? _timer;
+
+    protected override void OnInitialized()
+    {
+        Session.OnChange += StateHasChanged;
+        Session.TrackPageView();
+        _timer = new System.Threading.Timer(_ => InvokeAsync(StateHasChanged), null, 1000, 1000);
+    }
+
+    private static string FormatDuration(TimeSpan t) =>
+        $"{(int)t.TotalHours:D2}:{t.Minutes:D2}:{t.Seconds:D2}";
+
+    public void Dispose()
+    {
+        Session.OnChange -= StateHasChanged;
+        _timer?.Dispose();
+    }
+}

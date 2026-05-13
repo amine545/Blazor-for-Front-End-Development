@@ -1,0 +1,56 @@
+@page "/events/{Id:int}"
+@inject EventService EventService
+@inject NavigationManager Nav
+
+<PageTitle>@(_event?.Name ?? "Event") - EventEase</PageTitle>
+
+@if (_event is null)
+{
+    <div class="alert alert-warning">
+        <h4>Event not found</h4>
+        <p>The event with id <strong>@Id</strong> does not exist.</p>
+        <a class="btn btn-primary" href="/">Back to events</a>
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <h1>Event Details</h1>
+            <EventCard Event="_event" ShowActions="false" />
+        </div>
+        <div class="col-md-6 mb-3">
+            <h2>Edit (two-way binding)</h2>
+            <EventCard Event="_event" Editable="true" ShowActions="false"
+                       EventChanged="HandleChange" ValidityChanged="v => _isValid = v" />
+            <button class="btn btn-success mt-2" @onclick="Save" disabled="@(!_isValid)">Save</button>
+            <a class="btn btn-outline-secondary mt-2" href="/">Back</a>
+            <a class="btn btn-primary mt-2" href="@($"/register/{_event.Id}")">Register attendees</a>
+            @if (!_isValid)
+            {
+                <div class="text-danger small mt-2">Fix validation errors before saving.</div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private EventModel? _event;
+    private bool _isValid = true;
+
+    protected override void OnParametersSet() => _event = EventService.GetById(Id);
+
+    private void HandleChange(EventModel updated)
+    {
+        _event = updated;
+        StateHasChanged();
+    }
+
+    private void Save()
+    {
+        if (_event is null || !_isValid) return;
+        EventService.AddOrUpdate(_event);
+        Nav.NavigateTo("/");
+    }
+}

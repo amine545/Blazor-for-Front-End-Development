@@ -1,0 +1,91 @@
+@page "/register"
+@page "/register/{EventId:int}"
+@inject EventService EventService
+@inject UserSessionService Session
+@inject NavigationManager Nav
+
+<PageTitle>Register - EventEase</PageTitle>
+
+<h1>Event Registration</h1>
+
+@if (_submitted)
+{
+    <div class="alert alert-success">
+        <h4>Thanks, @_model.FullName!</h4>
+        <p>You're registered for <strong>@(EventService.GetById(_model.EventId)?.Name)</strong>.</p>
+        <a class="btn btn-primary" href="/">Back to events</a>
+    </div>
+}
+else
+{
+    <EditForm Model="_model" OnValidSubmit="HandleSubmit" FormName="registrationForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger" />
+
+        <div class="mb-3">
+            <label class="form-label">Event</label>
+            <InputSelect class="form-select" @bind-Value="_model.EventId">
+                <option value="0">-- Select an event --</option>
+                @foreach (var evt in EventService.GetAll())
+                {
+                    <option value="@evt.Id">@evt.Name (@evt.Date.ToShortDateString())</option>
+                }
+            </InputSelect>
+            <ValidationMessage For="@(() => _model.EventId)" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Full name</label>
+            <InputText class="form-control" @bind-Value="_model.FullName" />
+            <ValidationMessage For="@(() => _model.FullName)" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Email</label>
+            <InputText class="form-control" @bind-Value="_model.Email" />
+            <ValidationMessage For="@(() => _model.Email)" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Phone</label>
+            <InputText class="form-control" @bind-Value="_model.Phone" />
+            <ValidationMessage For="@(() => _model.Phone)" />
+        </div>
+
+        <div class="form-check mb-3">
+            <InputCheckbox class="form-check-input" id="terms" @bind-Value="_model.AcceptTerms" />
+            <label class="form-check-label" for="terms">I accept the terms and conditions.</label>
+            <ValidationMessage For="@(() => _model.AcceptTerms)" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Register</button>
+        <a class="btn btn-outline-secondary" href="/">Cancel</a>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public int? EventId { get; set; }
+    private RegistrationModel _model = new();
+    private bool _submitted;
+
+    protected override void OnParametersSet()
+    {
+        if (EventId.HasValue) _model.EventId = EventId.Value;
+        if (Session.IsAuthenticated)
+        {
+            _model.FullName = Session.UserName ?? string.Empty;
+            _model.Email = Session.Email ?? string.Empty;
+        }
+    }
+
+    private void HandleSubmit()
+    {
+        if (_model.EventId == 0) return;
+        if (EventService.GetById(_model.EventId) is null) return;
+        EventService.Register(_model);
+        if (!Session.IsAuthenticated)
+            Session.SignIn(_model.FullName, _model.Email);
+        Session.TrackRegistration(_model.EventId);
+        _submitted = true;
+    }
+}

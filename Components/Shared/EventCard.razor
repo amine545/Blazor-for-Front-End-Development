@@ -1,0 +1,86 @@
+@* Reusable Event Card with two-way data binding + validation *@
+@implements IDisposable
+
+<div class="card shadow-sm h-100">
+    <div class="card-body">
+        @if (Editable)
+        {
+            <EditForm EditContext="_editContext" FormName="@($"eventCard-{Event.Id}")">
+                <DataAnnotationsValidator />
+                <div class="mb-2">
+                    <label class="form-label small">Name</label>
+                    <InputText class="form-control" @bind-Value="Event.Name" />
+                    <ValidationMessage For="@(() => Event.Name)" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small">Date</label>
+                    <InputDate class="form-control" @bind-Value="Event.Date" />
+                    <ValidationMessage For="@(() => Event.Date)" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small">Location</label>
+                    <InputText class="form-control" @bind-Value="Event.Location" />
+                    <ValidationMessage For="@(() => Event.Location)" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small">Description</label>
+                    <InputTextArea class="form-control" rows="2" @bind-Value="Event.Description" />
+                    <ValidationMessage For="@(() => Event.Description)" />
+                </div>
+            </EditForm>
+        }
+        else
+        {
+            <h5 class="card-title">@(string.IsNullOrWhiteSpace(Event.Name) ? "(Unnamed event)" : Event.Name)</h5>
+            <h6 class="card-subtitle mb-2 text-muted">@Event.Date.ToString("dddd, MMM d yyyy")</h6>
+            <p class="card-text"><span class="badge bg-secondary">@(string.IsNullOrWhiteSpace(Event.Location) ? "TBD" : Event.Location)</span></p>
+            <p class="card-text">@Event.Description</p>
+        }
+    </div>
+    @if (ShowActions)
+    {
+        <div class="card-footer bg-white d-flex justify-content-between">
+            <a class="btn btn-sm btn-outline-primary" href="@($"/events/{Event.Id}")">Details</a>
+            <a class="btn btn-sm btn-primary" href="@($"/register/{Event.Id}")">Register</a>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EventModel Event { get; set; } = default!;
+    [Parameter] public bool Editable { get; set; }
+    [Parameter] public bool ShowActions { get; set; } = true;
+    [Parameter] public EventCallback<EventModel> EventChanged { get; set; }
+    [Parameter] public EventCallback<bool> ValidityChanged { get; set; }
+
+    private EditContext? _editContext;
+    private ValidationMessageStore? _messages;
+
+    protected override void OnParametersSet()
+    {
+        if (Editable && (_editContext is null || _editContext.Model != Event))
+        {
+            if (_editContext is not null)
+                _editContext.OnFieldChanged -= HandleFieldChanged;
+
+            _editContext = new EditContext(Event);
+            _messages = new ValidationMessageStore(_editContext);
+            _editContext.OnFieldChanged += HandleFieldChanged;
+        }
+    }
+
+    private async void HandleFieldChanged(object? sender, FieldChangedEventArgs e)
+    {
+        if (_editContext is null) return;
+        var isValid = _editContext.Validate();
+        if (EventChanged.HasDelegate) await EventChanged.InvokeAsync(Event);
+        if (ValidityChanged.HasDelegate) await ValidityChanged.InvokeAsync(isValid);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        if (_editContext is not null)
+            _editContext.OnFieldChanged -= HandleFieldChanged;
+    }
+}

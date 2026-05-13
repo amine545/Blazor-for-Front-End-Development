@@ -1,0 +1,32 @@
+@inherits LayoutComponentBase
+@inject UserSessionService Session
+@implements IDisposable
+
+<div class="page">
+    <NavMenu />
+    <main class="container py-4">
+        <div class="d-flex justify-content-end mb-3">
+            @if (Session.IsAuthenticated)
+            {
+                <span class="me-3 align-self-center">
+                    Signed in as <strong>@Session.UserName</strong>
+                </span>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="SignOut">Sign out</button>
+            }
+            else
+            {
+                <a class="btn btn-sm btn-outline-primary" href="/signin">Sign in</a>
+            }
+        </div>
+        @Body
+    </main>
+    <footer class="container text-center text-muted py-3">
+        <small>&copy; @DateTime.Now.Year EventEase</small>
+    </footer>
+</div>
+
+@code {
+    protected override void OnInitialized() => Session.OnChange += StateHasChanged;
+    private void SignOut() => Session.SignOut();
+    public void Dispose() => Session.OnChange -= StateHasChanged;
+}

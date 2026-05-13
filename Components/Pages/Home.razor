@@ -1,0 +1,78 @@
+@page "/"
+@inject EventService EventService
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Events - EventEase</PageTitle>
+
+<h1 class="mb-3">Upcoming Events</h1>
+<p class="text-muted">Browse, edit live, and register.</p>
+
+<div class="mb-3">
+    <input class="form-control" placeholder="Search events..." value="@_search" @oninput="OnSearchInput" />
+</div>
+
+@if (_events is null)
+{
+    <p>Loading...</p>
+}
+else if (_filtered.Count == 0)
+{
+    <div class="alert alert-info">No events match your search.</div>
+}
+else
+{
+    <div class="row g-3">
+        <Virtualize Items="_filtered" Context="evt" ItemSize="220" OverscanCount="4">
+            <ItemContent>
+                <div class="col-md-4">
+                    <EventCard Event="evt" />
+                </div>
+            </ItemContent>
+            <Placeholder>
+                <div class="col-md-4">
+                    <div class="card placeholder-glow" style="height:220px"></div>
+                </div>
+            </Placeholder>
+        </Virtualize>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<EventModel>? _events;
+    private List<EventModel> _filtered = new();
+    private string _search = string.Empty;
+    private System.Threading.CancellationTokenSource? _debounce;
+
+    protected override void OnInitialized()
+    {
+        _events = EventService.GetAll();
+        _filtered = _events.ToList();
+    }
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? string.Empty;
+        _debounce?.Cancel();
+        _debounce = new System.Threading.CancellationTokenSource();
+        try
+        {
+            await Task.Delay(200, _debounce.Token);
+            ApplyFilter();
+            StateHasChanged();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private void ApplyFilter()
+    {
+        if (_events is null) { _filtered = new(); return; }
+        if (string.IsNullOrWhiteSpace(_search)) { _filtered = _events.ToList(); return; }
+        var s = _search.Trim();
+        _filtered = _events.Where(e =>
+            e.Name.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+            e.Location.Contains(s, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    public void Dispose() => _debounce?.Cancel();
+}

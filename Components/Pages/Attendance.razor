@@ -1,0 +1,88 @@
+@page "/attendance"
+@page "/attendance/{EventId:int}"
+@inject EventService EventService
+@inject AttendanceService AttendanceService
+
+<PageTitle>Attendance - EventEase</PageTitle>
+
+<h1>Attendance Tracker</h1>
+<p class="text-muted">Monitor event participation in real time.</p>
+
+<div class="mb-3">
+    <label class="form-label">Select event</label>
+    <select class="form-select" @bind="_selectedEventId">
+        <option value="0">-- Choose --</option>
+        @foreach (var evt in EventService.GetAll())
+        {
+            <option value="@evt.Id">@evt.Name</option>
+        }
+    </select>
+</div>
+
+@if (_selectedEventId > 0)
+{
+    var evt = EventService.GetById(_selectedEventId);
+    var regs = EventService.GetRegistrations(_selectedEventId).ToList();
+    var presentCount = AttendanceService.CountPresent(_selectedEventId);
+
+    var rate = regs.Count == 0 ? 0 : (int)Math.Round(presentCount * 100.0 / regs.Count);
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h4>@evt?.Name</h4>
+            <p class="mb-2"><strong>@regs.Count</strong> registered &middot; <strong>@presentCount</strong> present &middot; <strong>@rate%</strong> attendance</p>
+            <div class="progress" style="height:8px">
+                <div class="progress-bar bg-success" role="progressbar" style="@($"width:{rate}%")"></div>
+            </div>
+        </div>
+    </div>
+
+    @if (regs.Count == 0)
+    {
+        <div class="alert alert-info">No registrations yet for this event.</div>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Present</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var reg in regs)
+                {
+                    var record = AttendanceService.GetForEvent(_selectedEventId)
+                        .FirstOrDefault(a => a.Email == reg.Email);
+                    var isPresent = record?.Present ?? false;
+                    <tr>
+                        <td>@reg.FullName</td>
+                        <td>@reg.Email</td>
+                        <td>
+                            <input type="checkbox" class="form-check-input"
+                                   checked="@isPresent"
+                                   @onchange="@(() => Toggle(reg.FullName, reg.Email))" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    [Parameter] public int? EventId { get; set; }
+    private int _selectedEventId;
+
+    protected override void OnParametersSet()
+    {
+        if (EventId.HasValue) _selectedEventId = EventId.Value;
+    }
+
+    private void Toggle(string name, string email)
+    {
+        AttendanceService.Toggle(_selectedEventId, name, email);
+    }
+}

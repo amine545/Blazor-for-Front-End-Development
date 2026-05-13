@@ -1,0 +1,36 @@
+@page "/signin"
+@inject UserSessionService Session
+@inject NavigationManager Nav
+
+<PageTitle>Sign in - EventEase</PageTitle>
+
+<h1>Sign in</h1>
+<p class="text-muted">Lightweight in-memory session for the demo.</p>
+
+<EditForm Model="this" OnValidSubmit="HandleSignIn" FormName="signInForm">
+    <DataAnnotationsValidator />
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <InputText class="form-control" @bind-Value="Name" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Email</label>
+        <InputText class="form-control" @bind-Value="Email" />
+    </div>
+    <button class="btn btn-primary" type="submit">Sign in</button>
+</EditForm>
+
+@code {
+    [System.ComponentModel.DataAnnotations.Required]
+    public string Name { get; set; } = string.Empty;
+
+    [System.ComponentModel.DataAnnotations.Required]
+    [System.ComponentModel.DataAnnotations.EmailAddress]
+    public string Email { get; set; } = string.Empty;
+
+    private void HandleSignIn()
+    {
+        Session.SignIn(Name, Email);
+        Nav.NavigateTo("/");
+    }
+}
